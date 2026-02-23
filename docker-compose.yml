@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: spy-bot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-spybot}
+      POSTGRES_USER: ${POSTGRES_USER:-spybot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-spybot}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-spybot} -d ${POSTGRES_DB:-spybot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  spy-bot:
+    build: .
+    container_name: spy-bot
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgres://spybot:spybot@postgres:5432/spybot?sslmode=disable}
+      MEDIA_MAX_MB: ${MEDIA_MAX_MB:-50}
+      MEDIA_BACKFILL_BATCH: ${MEDIA_BACKFILL_BATCH:-40}
+      MEDIA_BACKFILL_INTERVAL_SEC: ${MEDIA_BACKFILL_INTERVAL_SEC:-30}
+      MEDIA_BACKFILL_LOOKBACK_HOURS: ${MEDIA_BACKFILL_LOOKBACK_HOURS:-24}
+      PHOTO_RETENTION_DAYS: ${PHOTO_RETENTION_DAYS:-3}
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
+      WEB_ADDR: ${WEB_ADDR:-:8090}
+      WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://localhost:8090}
+      WEB_UI_TOKEN: ${WEB_UI_TOKEN:-}
+      EMOJI_SHIELD_ID: ${EMOJI_SHIELD_ID:-}
+      EMOJI_SPARK_ID: ${EMOJI_SPARK_ID:-}
+      EMOJI_WEB_ID: ${EMOJI_WEB_ID:-}
+      EMOJI_STATS_ID: ${EMOJI_STATS_ID:-}
+      EMOJI_CHATS_ID: ${EMOJI_CHATS_ID:-}
+      EMOJI_MEDIA_ID: ${EMOJI_MEDIA_ID:-}
+      EMOJI_DOC_ID: ${EMOJI_DOC_ID:-}
+      EMOJI_LOCK_ID: ${EMOJI_LOCK_ID:-}
+      EMOJI_HELLO_ID: ${EMOJI_HELLO_ID:-}
+      EMOJI_CHECK_ID: ${EMOJI_CHECK_ID:-}
+      EMOJI_WARN_ID: ${EMOJI_WARN_ID:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
